@@ -7,30 +7,28 @@
 
 namespace xwebview {
 
-  namespace detail {
-    struct window_impl;
-  }
+  class Window {
+    struct Impl;
 
-  class window {
   public:
-    window();
-    ~window();
+    Window();
+    ~Window();
 
     // Process
     void run();
     void destroy();
-    void attach_webview();
+    void attachWebview();
 
     // Window Style
-    void set_title();
-    void set_size();
-    void set_max_size();
-    void set_min_size();
-    void set_resizable();
+    void setTitle();
+    void setSize();
+    void setMaxSize();
+    void setMinSize();
+    void setResizable();
     void hide();
     void show();
 
   private:
-    std::unique_ptr<detail::window_impl> pimpl_;
+    std::unique_ptr<Impl> pImpl_{nullptr};
   };
 }  // namespace xwebview

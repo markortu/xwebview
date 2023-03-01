@@ -5,23 +5,32 @@
 
 #include <xwebview/window.h>
 
-class webview {
-public:
-  webview();
-  ~webview();
+#include <memory>
 
-  void* get_platform_webview();
+namespace xwebview {
 
-  // Content
-  void set_url();
-  void set_html();
+  class WebView {
+    struct Impl;
 
-  // Interoperability
-  void add_callback();
-  void remove_callback();
-  void evaluate();
+  public:
+    WebView();
+    ~WebView();
 
-  // Embedding
+    void* getPlatformWebview();
 
-private:
-};
+    // Content
+    void setUrl();
+    void setHtml();
+
+    // Interoperability
+    void addCallback();
+    void removeCallback();
+    void evaluate();
+
+    // Embedding
+
+  private:
+    std::unique_ptr<Impl> pImpl_{nullptr};
+    std::unique_ptr<Window> pWindow_{nullptr};
+  };
+}  // namespace xwebview

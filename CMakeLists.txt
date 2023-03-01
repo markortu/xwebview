@@ -30,7 +30,10 @@ include(CPM)
 # automatically. Keep that in mind when changing files, or explicitly mention them here.
 string(TOLOWER ${CMAKE_SYSTEM_NAME} SYSTEM_NAME)
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/${SYSTEM_NAME}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/source/${SYSTEM_NAME}/*.mm")
+file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
+file(GLOB platform_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/${SYSTEM_NAME}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/source/${SYSTEM_NAME}/*.mm")
+
+list(APPEND sources ${platform_sources})
 
 # ---- Create library ----
 
