@@ -1,0 +1,27 @@
+
+if (UNIX AND NOT APPLE)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(gtk REQUIRED gtk+-3.0 IMPORTED_TARGET)
+  pkg_check_modules(webkit REQUIRED webkit2gtk-4.0 IMPORTED_TARGET)
+  target_link_libraries(${PROJECT_NAME} PkgConfig::gtk PkgConfig::webkit)
+endif()
+
+if (APPLE)
+  find_package(PkgConfig REQUIRED)
+  target_link_libraries(${PROJECT_NAME} "-framework Webkit -framework Carbon -framework Cocoa")
+  enable_language(OBJC)
+  enable_language(OBJCXX)
+endif()
+
+if (WIN32)
+    include(NuGet)
+    nuget_add(WebView2 "Microsoft.Web.WebView2" ${webview2_VERSION})
+    target_compile_definitions(${PROJECT_NAME} PRIVATE UNICODE=1 _UNICODE=1)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${WebView2_PATH}/build/native/include)
+
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${WebView2_PATH}/build/native/x64/WebView2LoaderStatic.lib)
+    else()
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${WebView2_PATH}/build/native/x86/WebView2LoaderStatic.lib)
+    endif()
+endif()
