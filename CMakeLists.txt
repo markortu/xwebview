@@ -30,10 +30,8 @@ include(CPM)
 # automatically. Keep that in mind when changing files, or explicitly mention them here.
 string(TOLOWER ${CMAKE_SYSTEM_NAME} SYSTEM_NAME)
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
-file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
-file(GLOB platform_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/${SYSTEM_NAME}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/source/${SYSTEM_NAME}/*.mm")
-
-list(APPEND sources ${platform_sources})
+set(PLATFORM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/source/${SYSTEM_NAME}")
+file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${PLATFORM_SOURCE_DIR}/*.cpp" "${PLATFORM_SOURCE_DIR}/*.h" "${PLATFORM_SOURCE_DIR}/*.mm")
 
 # ---- Create library ----
 
@@ -54,8 +52,7 @@ target_include_directories(
                          $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
 )
 
-# ---- Create an installable target ----
-# this allows users to install and find the library via `find_package()`.
+add_subdirectory(examples examples)
 
 # the location where the project's version header will be placed should match the project's regular
 # header paths
