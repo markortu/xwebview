@@ -4,8 +4,13 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <functional>
 
 namespace xwebview {
+    using WindowSize = std::pair<std::size_t, std::size_t>;
+    using OnWindowResize = std::function<void(WindowSize)>;
+    using OnShowWindow = std::function<void(bool)>;
 
   class Window {
     struct Impl;
@@ -16,22 +21,31 @@ namespace xwebview {
 
     // Process
     void run();
-    //void destroy();
-    //void attachWebview();
+    void close();
 
     // Window Style
-    //void setTitle();
-    //void setSize();
-    //void setMaxSize();
-    //void setMinSize();
-    //void setResizable();
+    void setTitle(const std::string& title);
+
+    void setSize(std::size_t width, std::size_t height);
+    WindowSize getSize() const;
+    void setMaxSize(std::size_t width, std::size_t height);
+    WindowSize getMaxSize() const;
+    void setMinSize(std::size_t width, std::size_t height);
+    WindowSize getMinSize() const;
+
+    void setResizable(bool state);
     void hide();
     void show();
 
     void* getNativeWindow();
-  private:
+
+    OnWindowResize onWindowResize;
+    OnShowWindow onShowWindow;
+  protected:
     std::unique_ptr<Impl> pImpl_{nullptr};
-    std::pair<std::size_t, std::size_t> minSize_, maxSize_;
+
+  private:
+    WindowSize minSize_, maxSize_;
 
   };
 }  // namespace xwebview

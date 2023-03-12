@@ -3,12 +3,12 @@
 
 #pragma once
 
-#include <windows.h>
+#include "xwebview/window.h"
 
+#include <windows.h>
 #include <future>
 #include <optional>
-
-#include "xwebview/window.h"
+#include <CommCtrl.h>
 
 namespace xwebview {
   const wchar_t CLASS_NAME[] = L"xWebView Window Class";
@@ -22,10 +22,13 @@ namespace xwebview {
     void registerWindowClass();
     void enableDpiAwareness();
 
-    static const inline UINT WM_POSTMESSAGESAFE = RegisterWindowMessageW(L"PostMessageSafe");
-    bool isThreadSafe() const;
-    template <typename Func> auto postMessageSafe(Func &&);
     std::thread::id windowThreadId = std::this_thread::get_id();
+    bool isThreadSafe() const;
+    static const inline UINT WM_POSTMESSAGESAFE = RegisterWindowMessage(L"PostMessageSafe");
+    template <typename Func> auto postMessageSafe(Func &&);
+
+    static LRESULT CALLBACK customWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
+                                             UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
   };
 
   inline bool Window::Impl::isThreadSafe() const {
@@ -62,29 +65,46 @@ namespace xwebview {
   };
 
   template <typename Func> inline auto Window::Impl::postMessageSafe(Func &&func) {
-    using return_t = typename decltype(std::function(func))::result_type;
+    using ResultType = typename decltype(std::function(func))::result_type;
 
-    if constexpr (std::is_same_v<return_t, void>) {
+    if constexpr (std::is_same_v<ResultType, void>) {
       PostMessage(hwnd, WM_POSTMESSAGESAFE, 0,
-                  reinterpret_cast<LPARAM>(new SafeCallMessage<return_t>(std::function(func))));
+                  reinterpret_cast<LPARAM>(new SafeCallMessage<ResultType>(std::function(func))));
     } else {
-      std::promise<return_t> result;
+      std::promise<ResultType> result;
       PostMessage(
           hwnd, WM_POSTMESSAGESAFE, 0,
-          reinterpret_cast<LPARAM>(new SafeCallMessage<return_t>(std::function(func), result)));
+          reinterpret_cast<LPARAM>(new SafeCallMessage<ResultType>(std::function(func), result)));
 
       return result.get_future().get();
     }
   }
 
   inline LRESULT Window::Impl::windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    auto *window = reinterpret_cast<Window::Impl *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+    auto *window = reinterpret_cast<class Window *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
     if (window) {
       switch (uMsg) {
         case WM_GETMINMAXINFO: {
+          auto *info = reinterpret_cast<MINMAXINFO *>(lParam);
+          if (window->maxSize_.first) {
+            info->ptMaxTrackSize.x = static_cast<int>(window->maxSize_.first);
+          }
+          if (window->maxSize_.second) {
+            info->ptMaxTrackSize.y = static_cast<int>(window->maxSize_.second);
+          }
+          if (window->minSize_.first) {
+            info->ptMinTrackSize.x = static_cast<int>(window->minSize_.first);
+          }
+          if (window->minSize_.second) {
+            info->ptMinTrackSize.y = static_cast<int>(window->minSize_.second);
+          }
         } break;
+        case WM_SHOWWINDOW:
+          if (window->onShowWindow) window->onShowWindow(static_cast<BOOL>(wParam));
+          break;
         case WM_SIZE:
+          if (window->onWindowResize) window->onWindowResize(window->getSize());
           break;
         case WM_DESTROY:
         case WM_CLOSE:
@@ -95,12 +115,49 @@ namespace xwebview {
         case WM_EXITSIZEMOVE:
           break;
       }
-      if (uMsg == window->WM_POSTMESSAGESAFE) {
+      if (uMsg == window->pImpl_->WM_POSTMESSAGESAFE) {
         delete reinterpret_cast<SafeCall *>(lParam);
       }
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
+  }
+
+  inline LRESULT Window::Impl::customWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+                                                  LPARAM lParam, UINT_PTR uIdSubclass,
+                                                  DWORD_PTR dwRefData) {
+    auto *window = reinterpret_cast<class Window *>(dwRefData);
+
+    if (window) {
+      switch (uMsg) {
+        case WM_GETMINMAXINFO: {
+          auto *info = reinterpret_cast<MINMAXINFO *>(lParam);
+          if (window->maxSize_.first) {
+            info->ptMaxTrackSize.x = static_cast<int>(window->maxSize_.first);
+          }
+          if (window->maxSize_.second) {
+            info->ptMaxTrackSize.y = static_cast<int>(window->maxSize_.second);
+          }
+          if (window->minSize_.first) {
+            info->ptMinTrackSize.x = static_cast<int>(window->minSize_.first);
+          }
+          if (window->minSize_.second) {
+            info->ptMinTrackSize.y = static_cast<int>(window->minSize_.second);
+          }
+        } break;
+        case WM_SHOWWINDOW:
+          if (window->onShowWindow) window->onShowWindow(static_cast<BOOL>(wParam));
+          break;
+        case WM_SIZE:
+          if (window->onWindowResize) window->onWindowResize(window->getSize());
+          break;
+      }
+      if (uMsg == window->pImpl_->WM_POSTMESSAGESAFE) {
+        delete reinterpret_cast<SafeCall *>(lParam);
+        return NULL;
+      }
+    }
+    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
   }
 
   inline void Window::Impl::registerWindowClass() {
@@ -117,21 +174,43 @@ namespace xwebview {
     }
   }
 
-  inline void Window::Impl::enableDpiAwareness() {
-    auto *shcoredll = LoadLibraryW(L"Shcore.dll");
-    auto set_process_dpi_awareness = reinterpret_cast<HRESULT(CALLBACK *)(DWORD)>(
-        GetProcAddress(shcoredll, "SetProcessDpiAwareness"));
+  inline void SetupDPIAwarenessPreWin81() {
+    HINSTANCE user32Dll = LoadLibrary(L"user32.dll");
 
-    if (set_process_dpi_awareness) {
-      set_process_dpi_awareness(2);
-    } else {
-      auto *user32dll = LoadLibraryW(L"user32.dll");
-      auto set_process_dpi_aware
-          = reinterpret_cast<bool(CALLBACK *)()>(GetProcAddress(user32dll, "SetProcessDPIAware"));
-      if (set_process_dpi_aware) {
-        set_process_dpi_aware();
-      }
+    if (!user32Dll) {
+      return;
     }
+
+    typedef BOOL(WINAPI * SetProcessDPIAware)(void);
+    SetProcessDPIAware setProcessDPIAware
+        = (SetProcessDPIAware)(GetProcAddress(user32Dll, "SetProcessDPIAware"));
+
+    if (setProcessDPIAware) setProcessDPIAware();
+
+    FreeLibrary(user32Dll);
+  }
+
+  inline void Window::Impl::enableDpiAwareness() {
+    HMODULE shCoreDll = LoadLibraryW(L"Shcore.dll");
+    if (shCoreDll) {
+      enum ProcessDpiAwareness {
+        ProcessDpiUnaware = 0,
+        ProcessSystemDpiAware = 1,
+        ProcessPerMonitorDpiAware = 2
+      };
+
+      typedef HRESULT(WINAPI * SetProcessDpiAwareness)(ProcessDpiAwareness);
+      SetProcessDpiAwareness setProcessDpiAwareness
+          = (SetProcessDpiAwareness)(GetProcAddress(shCoreDll, "SetProcessDpiAwareness"));
+
+      if (!setProcessDpiAwareness
+          || setProcessDpiAwareness(ProcessPerMonitorDpiAware) == E_INVALIDARG) {
+        SetupDPIAwarenessPreWin81();
+      }
+
+      FreeLibrary(shCoreDll);
+    } else
+      SetupDPIAwarenessPreWin81();
   }
 
 }  // namespace xwebview

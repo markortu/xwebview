@@ -1,5 +1,5 @@
 #include <xwebview/window.h>
-
+#include <xwebview/webview.h>
 #include <thread>
 
 void InterfaceThread(xwebview::Window* window) { window->show(); }
@@ -12,11 +12,12 @@ int main() {
   });
   interfaceThread.detach();
 
-  std::thread secondWindow([&] {
-    auto window2 = xwebview::Window(window.getNativeWindow());
-    window2.show();
-    });
+  auto webview = xwebview::WebView(window.getNativeWindow());
+  webview.setResizable(true);
+  webview.setTitle("Mark Webview");
+  webview.setMinSize(600, 600);
 
-  secondWindow.detach();
+  webview.enableDevTools(true);
+
   window.run();
 }

@@ -9,28 +9,36 @@
 
 namespace xwebview {
 
-  class WebView {
+  class WebView : public Window {
     struct Impl;
 
   public:
-    WebView();
+    WebView(void* hWnd = nullptr);
     ~WebView();
 
-    void* getPlatformWebview();
+    //Settings
+    void enableDevTools(bool state);
+    void enableContextMenu(bool state);
+    void enableZoom(bool state);
+    void enableAcceleratorKeys(bool state);
 
-    // Content
-    void setUrl();
-    void setHtml();
+    // View
+    void resizeWebview(size_t width, size_t height);
+    void showWebview(bool state);
 
-    // Interoperability
-    void addCallback();
-    void removeCallback();
-    void evaluate();
+
+    //// Content
+    //void setUrl();
+    //void setHtml();
+
+    //// Interoperability
+    //void addCallback();
+    //void removeCallback();
+    //void evaluate();
 
     // Embedding
 
   private:
     std::unique_ptr<Impl> pImpl_{nullptr};
-    std::unique_ptr<Window> pWindow_{nullptr};
   };
 }  // namespace xwebview
