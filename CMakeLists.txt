@@ -46,6 +46,7 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>
 # Link dependencies
 set(webview2_VERSION "1.0.1245.22" CACHE STRING "The WebView2 version to use")
 include(PlatformWebview)
+include(NlohmannJSON)
 
 target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>

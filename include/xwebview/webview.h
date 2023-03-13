@@ -4,17 +4,19 @@
 #pragma once
 
 #include <xwebview/window.h>
+#include <xwebview/types.h>
 
 #include <memory>
+#include <unordered_map>
 
 namespace xwebview {
 
-  class WebView : public Window {
+  class Webview : public Window {
     struct Impl;
 
   public:
-    WebView(void* hWnd = nullptr);
-    ~WebView();
+    Webview(void* hWnd = nullptr);
+    ~Webview();
 
     //Settings
     void enableDevTools(bool state);
@@ -23,13 +25,22 @@ namespace xwebview {
     void enableAcceleratorKeys(bool state);
 
     // View
-    void resizeWebview(size_t width, size_t height);
+    void setWebviewPosition(const ViewRect& rect);
     void showWebview(bool state);
 
+    // Content
+    void navigate(const std::string& url);
+    const std::string& getUrl();
+    void setHtml(const std::string& html);
+    void onSourceChanged(const std::string& url);
+    void onContentLoaded(bool success);
 
-    //// Content
-    //void setUrl();
-    //void setHtml();
+    // functionality
+    void injectScript(const std::string& script);
+    void executeScript(const std::string& script);
+    void addCallback(const std::string& name, MessageCallback callback);
+    void removeCallback(const std::string& name);
+    void onMessage(const std::string& message);
 
     //// Interoperability
     //void addCallback();
@@ -39,6 +50,9 @@ namespace xwebview {
     // Embedding
 
   private:
+    void resizeWebview(const ViewSize& size);
+
     std::unique_ptr<Impl> pImpl_{nullptr};
+    std::unordered_map<std::string, MessageCallback> callbacks_;
   };
 }  // namespace xwebview

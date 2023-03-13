@@ -3,13 +3,14 @@
 
 #pragma once
 
+#include "types.h"
+
 #include <memory>
 #include <string>
 #include <functional>
 
 namespace xwebview {
-    using WindowSize = std::pair<std::size_t, std::size_t>;
-    using OnWindowResize = std::function<void(WindowSize)>;
+    using OnWindowResize = std::function<void(ViewSize)>;
     using OnShowWindow = std::function<void(bool)>;
 
   class Window {
@@ -25,14 +26,12 @@ namespace xwebview {
 
     // Window Style
     void setTitle(const std::string& title);
-
-    void setSize(std::size_t width, std::size_t height);
-    WindowSize getSize() const;
-    void setMaxSize(std::size_t width, std::size_t height);
-    WindowSize getMaxSize() const;
-    void setMinSize(std::size_t width, std::size_t height);
-    WindowSize getMinSize() const;
-
+    void setSize(const ViewSize& size);
+    ViewSize getSize() const;
+    void setMaxSize(const ViewSize& size);
+    ViewSize getMaxSize() const;
+    void setMinSize(const ViewSize& size);
+    ViewSize getMinSize() const;
     void setResizable(bool state);
     void hide();
     void show();
@@ -45,7 +44,7 @@ namespace xwebview {
     std::unique_ptr<Impl> pImpl_{nullptr};
 
   private:
-    WindowSize minSize_, maxSize_;
+    ViewSize minSize_, maxSize_;
 
   };
 }  // namespace xwebview

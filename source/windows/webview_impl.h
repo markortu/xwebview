@@ -14,13 +14,14 @@
 #include "xwebview/webview.h"
 
 namespace xwebview {
-  struct WebView::Impl {
+  struct Webview::Impl {
     bool initWebView(HWND hWnd, bool enableRemoteDebugging = false);
     wil::com_ptr<ICoreWebView2Controller> webviewController_;
     wil::com_ptr<ICoreWebView2> webview_;
+    std::vector<LPCWSTR> injectedScripts_;
   };
 
-  inline bool WebView::Impl::initWebView(HWND hWnd, bool enableRemoteDebugging) {
+  inline bool Webview::Impl::initWebView(HWND hWnd, bool enableRemoteDebugging) {
     using namespace Microsoft::WRL;
 
     ComPtr options = Microsoft::WRL::Make<CoreWebView2EnvironmentOptions>();
@@ -44,7 +45,7 @@ namespace xwebview {
                   hWnd, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
                             [&](HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
                               webviewController_ = controller;
-                              webviewController_->get_CoreWebView2(&this->webview_);
+                              webviewController_->get_CoreWebView2(&webview_);
                               flag.clear();
                               return S_OK;
                             })
